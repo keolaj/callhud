@@ -13,6 +13,12 @@
 -(void)prepareForDismissal;
 -(void)dismissPhoneRemoteViewController;
 -(void)presentPhoneRemoteViewControllerForView:(id)arg1;
+-(void)_loadAudioCallViewController;
+-(void)updateCallControllerForCurrentState;
+@end
+
+@interface PHInCallUIUtilities
++(BOOL)isSpringBoardLocked;
 @end
 
 @interface SpringBoard <UIGestureRecognizerDelegate>
@@ -43,6 +49,11 @@
 -(void)unholdCall:(id)arg1;
 @end
 
+@interface SBLockScreenManager
++(id)sharedInstanceIfExists;
+-(BOOL)isUILocked;
+@end
+
 %hook TUCall
 -(void)_handleStatusChange {
 	%orig;
@@ -52,6 +63,48 @@
 		[[%c(SpringBoard) sharedApplication] showCallBanner];
 	}
 }
+%end
+
+%hook PHInCallRootViewController
+-(void)_loadAudioCallViewController {
+	NSLog(@"hook test phincallrootviewcontroller");
+	id incomingCall = [[%c(TUCallCenter) sharedInstance] incomingCall];
+	BOOL springBoardLocked = [%c(PHInCallUIUtilities) isSpringBoardLocked];
+	if (incomingCall && !springBoardLocked) {
+		[self prepareForDismissal];
+        [self dismissPhoneRemoteViewController];
+
+		[[%c(SpringBoard) sharedApplication] showCallBanner];
+	}
+}
+// -(void)updateCallControllerForCurrentState {
+// 	%orig;
+
+// 	[self prepareForDismissal];
+// 	[%c(PHInCallRootViewController) setShouldForceDismiss];
+// 	[self dismissPhoneRemoteViewController];
+// }
+%end
+
+%group MPTelephonyManagerHook
+%hook MPTelephonyManager
+-(void)displayAlertForCallIfNecessary:(id)arg1 {
+	NSLog(@"displayAlertForCallIfNecessary hook test");
+	// %orig // noop
+}
+-(BOOL)shouldShowAlertForCall:(id)arg1 {
+	// NSLog(@"shouldShowAlertForCall hook test");
+	// NSLog(@"hook test lock screen state: %d", (int)[[%c(SBLockStateAggregator) sharedInstance] lockState]);
+	// //if phone is locked, display the normal call alert viewcontroller
+	// if([[%c(SBLockScreenManager) sharedInstanceIfExists] isUILocked]) {
+    //     return %orig;
+	// 	NSLog(@"phone is locked hook test");
+	// } else {
+    //     return NO;
+	// }
+	return YES;
+}
+%end
 %end
 
 %hook SpringBoard
@@ -128,13 +181,18 @@
 
 			[self.callWindow addSubview:self.callerLabel];
 		}
-		[self showCallBanner]; //testing
+		//[self showCallBanner]; //testing
+		NSLog(@"here hook test");
 	}
 	%orig;
 }
 %new
 -(void)showCallBanner {
 	NSLog(@"showCallBanner");
+
+	[[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
+	[[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
+	[[%c(PHInCallRootViewController) sharedInstance] setShouldForceDismiss];
 
 	TUCall *incomingCallInfo = [[%c(TUCallCenter) sharedInstance] incomingCall];
 	self.callerLabel.text = incomingCallInfo.displayName;
@@ -168,6 +226,15 @@
 %new
 -(void)hangUpButtonMessage {
 	[[%c(TUCallCenter) sharedInstance] disconnectCall:[[%c(TUCallCenter) sharedInstance] incomingCall]];
+	[self hideCallBanner];
 	NSLog(@"hang up button tapped");
 }
 %end
+
+%ctor {
+	%init(_ungrouped);
+	if ([[NSBundle bundleWithPath:@"/System/Library/SpringBoardPlugins/IncomingCall.servicebundle"] load]) {
+		NSLog(@"[CallConnect] bundle loaded succesfully!");
+		%init(MPTelephonyManagerHook);
+	}
+}

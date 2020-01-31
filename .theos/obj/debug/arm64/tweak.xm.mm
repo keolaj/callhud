@@ -14,6 +14,12 @@
 -(void)prepareForDismissal;
 -(void)dismissPhoneRemoteViewController;
 -(void)presentPhoneRemoteViewControllerForView:(id)arg1;
+-(void)_loadAudioCallViewController;
+-(void)updateCallControllerForCurrentState;
+@end
+
+@interface PHInCallUIUtilities
++(BOOL)isSpringBoardLocked;
 @end
 
 @interface SpringBoard <UIGestureRecognizerDelegate>
@@ -44,6 +50,11 @@
 -(void)unholdCall:(id)arg1;
 @end
 
+@interface SBLockScreenManager
++(id)sharedInstanceIfExists;
+-(BOOL)isUILocked;
+@end
+
 
 #include <substrate.h>
 #if defined(__clang__)
@@ -65,10 +76,10 @@
 #define _LOGOS_RETURN_RETAINED
 #endif
 
-@class TUCallCenter; @class TUCall; @class SpringBoard; 
-static void (*_logos_orig$_ungrouped$TUCall$_handleStatusChange)(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$TUCall$_handleStatusChange(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void (*_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$)(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static void _logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static void _logos_method$_ungrouped$SpringBoard$showCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hideCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$answerCallButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hangUpButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); 
-static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$TUCallCenter(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("TUCallCenter"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SpringBoard(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SpringBoard"); } return _klass; }
-#line 46 "tweak.xm"
+@class PHInCallUIUtilities; @class TUCallCenter; @class MPTelephonyManager; @class PHInCallRootViewController; @class TUCall; @class SpringBoard; 
+static void (*_logos_orig$_ungrouped$TUCall$_handleStatusChange)(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$TUCall$_handleStatusChange(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void (*_logos_orig$_ungrouped$PHInCallRootViewController$_loadAudioCallViewController)(_LOGOS_SELF_TYPE_NORMAL PHInCallRootViewController* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$PHInCallRootViewController$_loadAudioCallViewController(_LOGOS_SELF_TYPE_NORMAL PHInCallRootViewController* _LOGOS_SELF_CONST, SEL); static void (*_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$)(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static void _logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static void _logos_method$_ungrouped$SpringBoard$showCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hideCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$answerCallButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hangUpButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); 
+static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$TUCallCenter(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("TUCallCenter"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$PHInCallUIUtilities(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("PHInCallUIUtilities"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SpringBoard(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SpringBoard"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$PHInCallRootViewController(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("PHInCallRootViewController"); } return _klass; }
+#line 57 "tweak.xm"
 
 static void _logos_method$_ungrouped$TUCall$_handleStatusChange(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
 	_logos_orig$_ungrouped$TUCall$_handleStatusChange(self, _cmd);
@@ -78,6 +89,48 @@ static void _logos_method$_ungrouped$TUCall$_handleStatusChange(_LOGOS_SELF_TYPE
 		[[_logos_static_class_lookup$SpringBoard() sharedApplication] showCallBanner];
 	}
 }
+
+
+
+static void _logos_method$_ungrouped$PHInCallRootViewController$_loadAudioCallViewController(_LOGOS_SELF_TYPE_NORMAL PHInCallRootViewController* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
+	NSLog(@"hook test phincallrootviewcontroller");
+	id incomingCall = [[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall];
+	BOOL springBoardLocked = [_logos_static_class_lookup$PHInCallUIUtilities() isSpringBoardLocked];
+	if (incomingCall && !springBoardLocked) {
+		[self prepareForDismissal];
+        [self dismissPhoneRemoteViewController];
+
+		[[_logos_static_class_lookup$SpringBoard() sharedApplication] showCallBanner];
+	}
+}
+
+
+
+
+
+
+
+
+
+static void (*_logos_orig$MPTelephonyManagerHook$MPTelephonyManager$displayAlertForCallIfNecessary$)(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST, SEL, id); static void _logos_method$MPTelephonyManagerHook$MPTelephonyManager$displayAlertForCallIfNecessary$(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST, SEL, id); static BOOL (*_logos_orig$MPTelephonyManagerHook$MPTelephonyManager$shouldShowAlertForCall$)(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST, SEL, id); static BOOL _logos_method$MPTelephonyManagerHook$MPTelephonyManager$shouldShowAlertForCall$(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST, SEL, id); 
+
+static void _logos_method$MPTelephonyManagerHook$MPTelephonyManager$displayAlertForCallIfNecessary$(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd, id arg1) {
+	NSLog(@"displayAleryForCallIfNecessary hook test");
+	
+}
+static BOOL _logos_method$MPTelephonyManagerHook$MPTelephonyManager$shouldShowAlertForCall$(_LOGOS_SELF_TYPE_NORMAL MPTelephonyManager* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd, id arg1) {
+	
+	
+	
+	
+    
+	
+	
+    
+	
+	return YES;
+}
+
 
 
 
@@ -154,13 +207,18 @@ static void _logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$(
 
 			[self.callWindow addSubview:self.callerLabel];
 		}
-		[self showCallBanner]; 
+		
+		NSLog(@"here hook test");
 	}
 	_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$(self, _cmd, arg1);
 }
 
 static void _logos_method$_ungrouped$SpringBoard$showCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
 	NSLog(@"showCallBanner");
+
+	[[_logos_static_class_lookup$PHInCallRootViewController() sharedInstance] prepareForDismissal];
+	[[_logos_static_class_lookup$PHInCallRootViewController() sharedInstance] dismissPhoneRemoteViewController];
+	[[_logos_static_class_lookup$PHInCallRootViewController() sharedInstance] setShouldForceDismiss];
 
 	TUCall *incomingCallInfo = [[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall];
 	self.callerLabel.text = incomingCallInfo.displayName;
@@ -194,9 +252,15 @@ static void _logos_method$_ungrouped$SpringBoard$answerCallButtonMessage(_LOGOS_
 
 static void _logos_method$_ungrouped$SpringBoard$hangUpButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
 	[[_logos_static_class_lookup$TUCallCenter() sharedInstance] disconnectCall:[[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall]];
+	[self hideCallBanner];
 	NSLog(@"hang up button tapped");
 }
 
-static __attribute__((constructor)) void _logosLocalInit() {
-{Class _logos_class$_ungrouped$TUCall = objc_getClass("TUCall"); MSHookMessageEx(_logos_class$_ungrouped$TUCall, @selector(_handleStatusChange), (IMP)&_logos_method$_ungrouped$TUCall$_handleStatusChange, (IMP*)&_logos_orig$_ungrouped$TUCall$_handleStatusChange);Class _logos_class$_ungrouped$SpringBoard = objc_getClass("SpringBoard"); MSHookMessageEx(_logos_class$_ungrouped$SpringBoard, @selector(applicationDidFinishLaunching:), (IMP)&_logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$, (IMP*)&_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$);{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(showCallBanner), (IMP)&_logos_method$_ungrouped$SpringBoard$showCallBanner, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(hideCallBanner), (IMP)&_logos_method$_ungrouped$SpringBoard$hideCallBanner, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(answerCallButtonMessage), (IMP)&_logos_method$_ungrouped$SpringBoard$answerCallButtonMessage, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(hangUpButtonMessage), (IMP)&_logos_method$_ungrouped$SpringBoard$hangUpButtonMessage, _typeEncoding); }{ char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIWindow *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(callWindow), (IMP)&_logos_method$_ungrouped$SpringBoard$callWindow, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIWindow *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setCallWindow:), (IMP)&_logos_method$_ungrouped$SpringBoard$setCallWindow, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(contactView), (IMP)&_logos_method$_ungrouped$SpringBoard$contactView, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setContactView:), (IMP)&_logos_method$_ungrouped$SpringBoard$setContactView, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(acceptButton), (IMP)&_logos_method$_ungrouped$SpringBoard$acceptButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setAcceptButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setAcceptButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(declineButton), (IMP)&_logos_method$_ungrouped$SpringBoard$declineButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setDeclineButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setDeclineButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(speakerButton), (IMP)&_logos_method$_ungrouped$SpringBoard$speakerButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setSpeakerButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setSpeakerButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(callerLabel), (IMP)&_logos_method$_ungrouped$SpringBoard$callerLabel, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setCallerLabel:), (IMP)&_logos_method$_ungrouped$SpringBoard$setCallerLabel, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(numberLabel), (IMP)&_logos_method$_ungrouped$SpringBoard$numberLabel, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setNumberLabel:), (IMP)&_logos_method$_ungrouped$SpringBoard$setNumberLabel, _typeEncoding); } } }
-#line 174 "tweak.xm"
+
+static __attribute__((constructor)) void _logosLocalCtor_de011b60(int __unused argc, char __unused **argv, char __unused **envp) {
+	{Class _logos_class$_ungrouped$TUCall = objc_getClass("TUCall"); MSHookMessageEx(_logos_class$_ungrouped$TUCall, @selector(_handleStatusChange), (IMP)&_logos_method$_ungrouped$TUCall$_handleStatusChange, (IMP*)&_logos_orig$_ungrouped$TUCall$_handleStatusChange);Class _logos_class$_ungrouped$PHInCallRootViewController = objc_getClass("PHInCallRootViewController"); MSHookMessageEx(_logos_class$_ungrouped$PHInCallRootViewController, @selector(_loadAudioCallViewController), (IMP)&_logos_method$_ungrouped$PHInCallRootViewController$_loadAudioCallViewController, (IMP*)&_logos_orig$_ungrouped$PHInCallRootViewController$_loadAudioCallViewController);Class _logos_class$_ungrouped$SpringBoard = objc_getClass("SpringBoard"); MSHookMessageEx(_logos_class$_ungrouped$SpringBoard, @selector(applicationDidFinishLaunching:), (IMP)&_logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$, (IMP*)&_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$);{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(showCallBanner), (IMP)&_logos_method$_ungrouped$SpringBoard$showCallBanner, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(hideCallBanner), (IMP)&_logos_method$_ungrouped$SpringBoard$hideCallBanner, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(answerCallButtonMessage), (IMP)&_logos_method$_ungrouped$SpringBoard$answerCallButtonMessage, _typeEncoding); }{ char _typeEncoding[1024]; unsigned int i = 0; _typeEncoding[i] = 'v'; i += 1; _typeEncoding[i] = '@'; i += 1; _typeEncoding[i] = ':'; i += 1; _typeEncoding[i] = '\0'; class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(hangUpButtonMessage), (IMP)&_logos_method$_ungrouped$SpringBoard$hangUpButtonMessage, _typeEncoding); }{ char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIWindow *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(callWindow), (IMP)&_logos_method$_ungrouped$SpringBoard$callWindow, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIWindow *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setCallWindow:), (IMP)&_logos_method$_ungrouped$SpringBoard$setCallWindow, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(contactView), (IMP)&_logos_method$_ungrouped$SpringBoard$contactView, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setContactView:), (IMP)&_logos_method$_ungrouped$SpringBoard$setContactView, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(acceptButton), (IMP)&_logos_method$_ungrouped$SpringBoard$acceptButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setAcceptButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setAcceptButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(declineButton), (IMP)&_logos_method$_ungrouped$SpringBoard$declineButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setDeclineButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setDeclineButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(speakerButton), (IMP)&_logos_method$_ungrouped$SpringBoard$speakerButton, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UIButton *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setSpeakerButton:), (IMP)&_logos_method$_ungrouped$SpringBoard$setSpeakerButton, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(callerLabel), (IMP)&_logos_method$_ungrouped$SpringBoard$callerLabel, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setCallerLabel:), (IMP)&_logos_method$_ungrouped$SpringBoard$setCallerLabel, _typeEncoding); } { char _typeEncoding[1024]; sprintf(_typeEncoding, "%s@:", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(numberLabel), (IMP)&_logos_method$_ungrouped$SpringBoard$numberLabel, _typeEncoding); sprintf(_typeEncoding, "v@:%s", @encode(UILabel *)); class_addMethod(_logos_class$_ungrouped$SpringBoard, @selector(setNumberLabel:), (IMP)&_logos_method$_ungrouped$SpringBoard$setNumberLabel, _typeEncoding); } }
+	if ([[NSBundle bundleWithPath:@"/System/Library/SpringBoardPlugins/IncomingCall.servicebundle"] load]) {
+		NSLog(@"[CallConnect] bundle loaded succesfully!");
+		{Class _logos_class$MPTelephonyManagerHook$MPTelephonyManager = objc_getClass("MPTelephonyManager"); MSHookMessageEx(_logos_class$MPTelephonyManagerHook$MPTelephonyManager, @selector(displayAlertForCallIfNecessary:), (IMP)&_logos_method$MPTelephonyManagerHook$MPTelephonyManager$displayAlertForCallIfNecessary$, (IMP*)&_logos_orig$MPTelephonyManagerHook$MPTelephonyManager$displayAlertForCallIfNecessary$);MSHookMessageEx(_logos_class$MPTelephonyManagerHook$MPTelephonyManager, @selector(shouldShowAlertForCall:), (IMP)&_logos_method$MPTelephonyManagerHook$MPTelephonyManager$shouldShowAlertForCall$, (IMP*)&_logos_orig$MPTelephonyManagerHook$MPTelephonyManager$shouldShowAlertForCall$);}
+	}
+}

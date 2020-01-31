@@ -1,1 +1,9 @@
-{ Filter = { Bundles = ( "com.apple.springboard" ); }; }
+{ 
+	Filter = { 
+		Bundles = ( 
+			"com.apple.springboard",
+			"com.apple.mobilephone.incomingcall",
+			"com.apple.InCallService" 
+ 		);
+	};
+}
