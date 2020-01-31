@@ -1,0 +1,10 @@
+Package: com.keolajarvegren.callhud
+Name: callhud3
+Depends: mobilesubstrate
+Architecture: iphoneos-arm
+Description: An awesome MobileSubstrate tweak!
+Maintainer: keolajarvegren
+Author: keolajarvegren
+Section: Tweaks
+Version: 0.0.1-9+debug
+Installed-Size: 204
