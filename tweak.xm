@@ -1,24 +1,40 @@
 #import <UIKit/UIKit.h>
+#import "MRYIPCCenter.h"
 
 @interface TUCall
 @property (nonatomic,copy,readonly) NSString * displayName;
 @end
 
-@interface PHInCallRootViewController:UIViewController
-@property (retain, nonatomic) UIViewController* CallViewController;
-@property (assign) BOOL dismissalWasDemandedBeforeRemoteViewControllerWasAvailable;
-@property(retain, nonatomic) TUCall *alertActivationCall;
-+(id)sharedInstance;
-+(void)setShouldForceDismiss;
--(void)prepareForDismissal;
--(void)dismissPhoneRemoteViewController;
--(void)presentPhoneRemoteViewControllerForView:(id)arg1;
--(void)_loadAudioCallViewController;
--(void)updateCallControllerForCurrentState;
+@interface SKJServer : NSObject
+@property (nonatomic, strong) MRYIPCCenter *center;
 @end
 
-@interface PHInCallUIUtilities
-+(BOOL)isSpringBoardLocked;
+@implementation SKJServer
+
++(void)load
+{
+	[self sharedInstance];
+}
+
++(instancetype)sharedInstance
+{
+	static dispatch_once_t onceToken = 0;
+	__strong static SKJServer* sharedInstance = nil;
+	dispatch_once(&onceToken, ^{
+		sharedInstance = [[self alloc] init];
+	});
+	return sharedInstance;
+}
+
+-(instancetype)init
+{
+	if ((self = [super init]))
+	{
+		self.center = [MRYIPCCenter centerNamed:@"com.keolajarvegren.SKJServer"];
+		NSLog(@"[SKJServer] running server in %@", [NSProcessInfo processInfo].processName);
+	}
+	return self;
+}
 @end
 
 @interface SpringBoard <UIGestureRecognizerDelegate>
@@ -29,9 +45,11 @@
 @property (retain, nonatomic) UIButton *speakerButton;
 @property (strong, nonatomic) UILabel *callerLabel;
 @property (strong, nonatomic) UILabel *numberLabel;
+@property (strong, nonatomic) SKJServer *server;
 +(id)sharedApplication;
 -(void)showCallBanner;
 -(void)hideCallBanner;
+-(BOOL)isSpringBoardLocked;
 @end
 
 @interface SBLockStateAggregator
@@ -54,57 +72,32 @@
 -(BOOL)isUILocked;
 @end
 
+@interface MPTelephonyManager
+-(void)displayAlertForCallIfNecessary:(id)arg1;
+-(BOOL)shouldShowAlertForCall:(id)arg1;
+@end
+
+@interface SBInCallAlertManager
+-(void)reactivateAlertFromStatusBarTap;
+@end
+
+%hook SBInCallAlertManager
+-(void)reactivateAlertFromStatusBarTap {
+	NSLog(@"reactivateAlertFromStatusBarTap hook test: %@", [NSProcessInfo processInfo].processName);
+	// nope
+}
+%end
+
 %hook TUCall
 -(void)_handleStatusChange {
 	%orig;
+	NSLog(@"_handleStatusChange hook test: %@", [NSProcessInfo processInfo].processName);
 	id incomingCallObject = [[%c(TUCallCenter) sharedInstance] incomingCall];
 
 	if (incomingCallObject) {
 		[[%c(SpringBoard) sharedApplication] showCallBanner];
 	}
 }
-%end
-
-%hook PHInCallRootViewController
--(void)_loadAudioCallViewController {
-	NSLog(@"hook test phincallrootviewcontroller");
-	id incomingCall = [[%c(TUCallCenter) sharedInstance] incomingCall];
-	BOOL springBoardLocked = [%c(PHInCallUIUtilities) isSpringBoardLocked];
-	if (incomingCall && !springBoardLocked) {
-		[self prepareForDismissal];
-        [self dismissPhoneRemoteViewController];
-
-		[[%c(SpringBoard) sharedApplication] showCallBanner];
-	}
-}
-// -(void)updateCallControllerForCurrentState {
-// 	%orig;
-
-// 	[self prepareForDismissal];
-// 	[%c(PHInCallRootViewController) setShouldForceDismiss];
-// 	[self dismissPhoneRemoteViewController];
-// }
-%end
-
-%group MPTelephonyManagerHook
-%hook MPTelephonyManager
--(void)displayAlertForCallIfNecessary:(id)arg1 {
-	NSLog(@"displayAlertForCallIfNecessary hook test");
-	// %orig // noop
-}
--(BOOL)shouldShowAlertForCall:(id)arg1 {
-	// NSLog(@"shouldShowAlertForCall hook test");
-	// NSLog(@"hook test lock screen state: %d", (int)[[%c(SBLockStateAggregator) sharedInstance] lockState]);
-	// //if phone is locked, display the normal call alert viewcontroller
-	// if([[%c(SBLockScreenManager) sharedInstanceIfExists] isUILocked]) {
-    //     return %orig;
-	// 	NSLog(@"phone is locked hook test");
-	// } else {
-    //     return NO;
-	// }
-	return YES;
-}
-%end
 %end
 
 %hook SpringBoard
@@ -115,7 +108,14 @@
 %property (retain, nonatomic) UIButton *speakerButton;
 %property (strong, nonatomic) UILabel *callerLabel;
 %property (strong, nonatomic) UILabel *numberLabel;
+%property (strong, nonatomic) SKJServer *server;
 -(void)applicationDidFinishLaunching:(UIApplication *)arg1 {
+	if (!self.server) {
+		[SKJServer load];
+		[self.server.center registerMethod:@selector(showCallBanner:) withTarget:self];
+		[self.server.center registerMethod:@selector(hideCallBanner:) withTarget:self];
+		[self.server.center registerMethod:@selector(isSpringBoardLocked:) withTarget:self];
+	}
 	if (!self.callWindow) {
 		CGRect screenBounds = [UIScreen mainScreen].bounds;
 
@@ -187,12 +187,16 @@
 	%orig;
 }
 %new
+-(BOOL)isSpringBoardLocked {
+	return [%c(PHInCallUIUtilities) isSpringBoardLocked];
+}
+%new
 -(void)showCallBanner {
 	NSLog(@"showCallBanner");
 
-	[[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
-	[[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
-	[[%c(PHInCallRootViewController) sharedInstance] setShouldForceDismiss];
+	// [[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
+	// [[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
+	// [[%c(PHInCallRootViewController) sharedInstance] setShouldForceDismiss];
 
 	TUCall *incomingCallInfo = [[%c(TUCallCenter) sharedInstance] incomingCall];
 	self.callerLabel.text = incomingCallInfo.displayName;
@@ -231,10 +235,31 @@
 }
 %end
 
+%group MPTelephonyManagerHook
+%hook MPTelephonyManager
+-(void)displayAlertForCallIfNecessary:(id)arg1 {
+	NSLog(@"displayAlertForCallIfNecessary hook test: %@", [NSProcessInfo processInfo].processName);
+	//%orig; // noop
+}
+-(BOOL)shouldShowAlertForCall:(id)arg1 {
+	NSLog(@"shouldShowAlertForCall hook test: %@", [NSProcessInfo processInfo].processName);
+	// NSLog(@"hook test lock screen state: %d", (int)[[%c(SBLockStateAggregator) sharedInstance] lockState]);
+	// //if phone is locked, display the normal call alert viewcontroller
+	// if([[%c(SBLockScreenManager) sharedInstanceIfExists] isUILocked]) {
+    //     return %orig;
+	// 	NSLog(@"phone is locked hook test");
+	// } else {
+    //     return NO;
+	// }
+	return YES;
+}
+%end
+%end
+
 %ctor {
 	%init(_ungrouped);
 	if ([[NSBundle bundleWithPath:@"/System/Library/SpringBoardPlugins/IncomingCall.servicebundle"] load]) {
-		NSLog(@"[CallConnect] bundle loaded succesfully!");
+		NSLog(@"[CallConnect] bundle loaded succesfully! hook test");
 		%init(MPTelephonyManagerHook);
 	}
 }
