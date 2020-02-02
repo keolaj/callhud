@@ -28,7 +28,7 @@
 
 %hook PHInCallRootViewController
 -(void)_loadAudioCallViewController {
-	NSLog(@"hook test phincallrootviewcontroller: %@", [NSProcessInfo processInfo].processName);
+	NSLog(@"hook test _loadAudioViewController: %@", [NSProcessInfo processInfo].processName);
 	MRYIPCCenter* center = [MRYIPCCenter centerNamed:@"com.keolajarvegren.SKJServer"];
 	id incomingCall = [[%c(TUCallCenter) sharedInstance] incomingCall];
 	BOOL springBoardLocked = [center callExternalMethod:@selector(isSpringBoardLocked) withArguments:nil];
@@ -39,12 +39,12 @@
 		[center callExternalVoidMethod:@selector(showCallBanner) withArguments:nil];
 	}
 }
-// -(void)updateCallControllerForCurrentState {
-// 	%orig;
-
-// 	[self prepareForDismissal];
-// 	[%c(PHInCallRootViewController) setShouldForceDismiss];
-// 	[self dismissPhoneRemoteViewController];
-// }
+-(void)updateCallControllerForCurrentState {
+	%orig;
+	NSLog(@"hook test updateCallControllerForCurrentState: %@", [NSProcessInfo processInfo].processName);
+	// [self prepareForDismissal];
+	// [%c(PHInCallRootViewController) setShouldForceDismiss];
+	// [self dismissPhoneRemoteViewController];
+}
 %end
 

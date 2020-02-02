@@ -11,5 +11,7 @@ callhud3_CFLAGS = -fobjc-arc
 callhud3_FRAMEWORKS = UIKit Foundation
 callhud3_PivateFrameworks = TelephonyUtilities
 SUBPROJECTS += incallservicehook
+after-install::
+	install.exec "killall callservicesd"
 include $(THEOS_MAKE_PATH)/aggregate.mk
 include $(THEOS_MAKE_PATH)/tweak.mk

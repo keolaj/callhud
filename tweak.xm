@@ -45,11 +45,13 @@
 @property (retain, nonatomic) UIButton *speakerButton;
 @property (strong, nonatomic) UILabel *callerLabel;
 @property (strong, nonatomic) UILabel *numberLabel;
+@property (nonatomic) BOOL isCallHudHidden;
 @property (strong, nonatomic) SKJServer *server;
 +(id)sharedApplication;
 -(void)showCallBanner;
 -(void)hideCallBanner;
 -(BOOL)isSpringBoardLocked;
+-(void)setDisplayName:(NSString*)inputString;
 @end
 
 @interface SBLockStateAggregator
@@ -65,6 +67,7 @@
 -(void)disconnectCall:(id)arg1;
 -(void)holdCall:(id)arg1 ;
 -(void)unholdCall:(id)arg1;
+-(void)disconnectAllCalls;
 @end
 
 @interface SBLockScreenManager
@@ -84,7 +87,11 @@
 %hook SBInCallAlertManager
 -(void)reactivateAlertFromStatusBarTap {
 	NSLog(@"reactivateAlertFromStatusBarTap hook test: %@", [NSProcessInfo processInfo].processName);
-	// nope
+	SpringBoard *springboard = (SpringBoard*)[NSClassFromString(@"SpringBoard") sharedApplication];
+	if (springboard.isCallHudHidden) {
+		[springboard showCallBanner];
+	}
+	NSLog(@"%@", springboard);
 }
 %end
 
@@ -92,9 +99,10 @@
 -(void)_handleStatusChange {
 	%orig;
 	NSLog(@"_handleStatusChange hook test: %@", [NSProcessInfo processInfo].processName);
-	id incomingCallObject = [[%c(TUCallCenter) sharedInstance] incomingCall];
+	TUCall *incomingCallObject = [[%c(TUCallCenter) sharedInstance] incomingCall];
 
 	if (incomingCallObject) {
+		[[%c(SpringBoard) sharedApplication] setDisplayName:incomingCallObject.displayName];
 		[[%c(SpringBoard) sharedApplication] showCallBanner];
 	}
 }
@@ -108,6 +116,7 @@
 %property (retain, nonatomic) UIButton *speakerButton;
 %property (strong, nonatomic) UILabel *callerLabel;
 %property (strong, nonatomic) UILabel *numberLabel;
+%property (assign, nonatomic) BOOL isCallHudHidden;
 %property (strong, nonatomic) SKJServer *server;
 -(void)applicationDidFinishLaunching:(UIApplication *)arg1 {
 	if (!self.server) {
@@ -128,6 +137,7 @@
 		blurEffectView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		[blurEffectView.layer setMasksToBounds:YES];
 		[self.callWindow addSubview:blurEffectView];
+		self.isCallHudHidden = YES;
 
 		self.callWindow.windowLevel = UIWindowLevelAlert + 10;
 		self.callWindow.layer.cornerRadius = 10;
@@ -193,13 +203,16 @@
 %new
 -(void)showCallBanner {
 	NSLog(@"showCallBanner");
+	self.isCallHudHidden = NO;
 
 	// [[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
 	// [[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
 	// [[%c(PHInCallRootViewController) sharedInstance] setShouldForceDismiss];
-
-	TUCall *incomingCallInfo = [[%c(TUCallCenter) sharedInstance] incomingCall];
-	self.callerLabel.text = incomingCallInfo.displayName;
+	// TUCall *incomingCallInfo = [[%c(TUCallCenter) sharedInstance] incomingCall];
+	// NSLog(@"hook test %@", self.callerLabel.text);
+	// if (![incomingCallInfo.displayName isEqualToString:@""]) {
+	// 	self.callerLabel.text = incomingCallInfo.displayName;
+	// }
 
 	[UIView animateWithDuration:0.3f animations:^{
 		self.callWindow.hidden = NO;
@@ -207,12 +220,13 @@
 		self.callWindow.center = CGPointMake(self.callWindow.center.x, +85);
 	}
 	completion:^(BOOL finished) {
-
 	}];
 }
 %new
 -(void)hideCallBanner {
 	NSLog(@"hideCallBanner");
+	NSLog(@"hook test %@", self.callerLabel.text);
+	self.isCallHudHidden = YES;
 
 	[UIView animateWithDuration:0.3f animations:^{
 		self.callWindow.alpha = 0.0;
@@ -229,9 +243,14 @@
 }
 %new
 -(void)hangUpButtonMessage {
-	[[%c(TUCallCenter) sharedInstance] disconnectCall:[[%c(TUCallCenter) sharedInstance] incomingCall]];
+	//[[%c(TUCallCenter) sharedInstance] disconnectCall:[[%c(TUCallCenter) sharedInstance] incomingCall]];
+	[[%c(TUCallCenter) sharedInstance] disconnectAllCalls];
 	[self hideCallBanner];
 	NSLog(@"hang up button tapped");
+}
+%new
+-(void)setDisplayName:(NSString *)inputName {
+	self.callerLabel.text = inputName;
 }
 %end
 
