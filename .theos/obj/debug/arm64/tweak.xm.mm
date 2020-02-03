@@ -114,9 +114,9 @@
 #define _LOGOS_RETURN_RETAINED
 #endif
 
-@class PHInCallUIUtilities; @class SBInCallAlertManager; @class MPTelephonyManager; @class SpringBoard; @class TUCallCenter; @class SBStatusBarManager; @class CNContactStore; @class TUCall; 
+@class SBInCallAlertManager; @class SpringBoard; @class MPTelephonyManager; @class TUCall; @class TUCallCenter; @class PHInCallUIUtilities; @class SBStatusBarManager; @class CNContactStore; 
 static void (*_logos_orig$_ungrouped$SBInCallAlertManager$reactivateAlertFromStatusBarTap)(_LOGOS_SELF_TYPE_NORMAL SBInCallAlertManager* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SBInCallAlertManager$reactivateAlertFromStatusBarTap(_LOGOS_SELF_TYPE_NORMAL SBInCallAlertManager* _LOGOS_SELF_CONST, SEL); static void (*_logos_orig$_ungrouped$TUCall$_handleStatusChange)(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$TUCall$_handleStatusChange(_LOGOS_SELF_TYPE_NORMAL TUCall* _LOGOS_SELF_CONST, SEL); static void (*_logos_orig$_ungrouped$SpringBoard$applicationDidFinishLaunching$)(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static void _logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, UIApplication *); static BOOL _logos_method$_ungrouped$SpringBoard$isSpringBoardLocked(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$showCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hideCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$answerCallButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$hangUpButtonMessage(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL); static void _logos_method$_ungrouped$SpringBoard$setDisplayName$(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST, SEL, NSString *); 
-static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SpringBoard(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SpringBoard"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$PHInCallUIUtilities(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("PHInCallUIUtilities"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$TUCallCenter(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("TUCallCenter"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SBStatusBarManager(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SBStatusBarManager"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$CNContactStore(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("CNContactStore"); } return _klass; }
+static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SpringBoard(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SpringBoard"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$SBStatusBarManager(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("SBStatusBarManager"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$CNContactStore(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("CNContactStore"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$PHInCallUIUtilities(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("PHInCallUIUtilities"); } return _klass; }static __inline__ __attribute__((always_inline)) __attribute__((unused)) Class _logos_static_class_lookup$TUCallCenter(void) { static Class _klass; if(!_klass) { _klass = objc_getClass("TUCallCenter"); } return _klass; }
 #line 95 "tweak.xm"
 
 static void _logos_method$_ungrouped$SBInCallAlertManager$reactivateAlertFromStatusBarTap(_LOGOS_SELF_TYPE_NORMAL SBInCallAlertManager* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
@@ -199,8 +199,8 @@ static void _logos_method$_ungrouped$SpringBoard$applicationDidFinishLaunching$(
 		if (!self.contactView) {
 			self.contactView = [[UIButton alloc] initWithFrame:CGRectMake(15, 15, 70, 70)];
 			self.contactView.alpha = 1.0;
-			self.contactView.layer.cornerRadius = 10.0;
-			self.contactView.backgroundColor = [UIColor whiteColor];
+			self.contactView.layer.cornerRadius = self.contactView.frame.size.width / 2;
+			self.contactView.clipsToBounds = YES;
 
 			[self.callWindow addSubview:self.contactView]; 
 		}
@@ -248,22 +248,22 @@ static BOOL _logos_method$_ungrouped$SpringBoard$isSpringBoardLocked(_LOGOS_SELF
 }
 
 static void _logos_method$_ungrouped$SpringBoard$showCallBanner(_LOGOS_SELF_TYPE_NORMAL SpringBoard* _LOGOS_SELF_CONST __unused self, SEL __unused _cmd) {
-	NSLog(@"showCallBanner");
+	
 	self.isCallHudHidden = NO;
-	NSLog(@"hook test status bar: %f", [((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[_logos_static_class_lookup$SBStatusBarManager() sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height);
-	NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
-	NSLog(@"hook test contact identifier: %@", ((TUCall *)[[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall]).contactIdentifier);
-	CNEntityType entityType = CNEntityTypeContacts;
-	NSLog(@"hook test CNContactStore authorization value: %ld", [CNContactStore authorizationStatusForEntityType:entityType]);
+	
+	
+	
+	
 	CNContactStore *store = [[_logos_static_class_lookup$CNContactStore() alloc] init];
 	NSError *error;
-	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactImageDataKey] error:&error];
-	UIImage *contactImage = [UIImage imageWithData:currentCallContact.imageData];
-	NSLog(@"hook test image data: %@", contactImage);
+	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[_logos_static_class_lookup$TUCallCenter() sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactThumbnailImageDataKey] error:&error];
+	UIImage *contactImage = [UIImage imageWithData:currentCallContact.thumbnailImageData];
+	
 
 	UIImageView *contactImageView = [[UIImageView alloc] initWithImage:contactImage];
 	contactImageView.frame = self.contactView.bounds;
-	[contactImageView.layer setMasksToBounds:YES];
+	contactImageView.layer.cornerRadius = 35;
+	contactImageView.clipsToBounds = YES;
 	[self.contactView addSubview:contactImageView];
 	
 	

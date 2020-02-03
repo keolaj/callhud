@@ -173,8 +173,8 @@
 		if (!self.contactView) {
 			self.contactView = [[UIButton alloc] initWithFrame:CGRectMake(15, 15, 70, 70)];
 			self.contactView.alpha = 1.0;
-			self.contactView.layer.cornerRadius = 10.0;
-			self.contactView.backgroundColor = [UIColor whiteColor];
+			self.contactView.layer.cornerRadius = self.contactView.frame.size.width / 2;
+			self.contactView.clipsToBounds = YES;
 
 			[self.callWindow addSubview:self.contactView]; 
 		}
@@ -222,22 +222,22 @@
 }
 %new
 -(void)showCallBanner {
-	NSLog(@"showCallBanner");
+	//NSLog(@"showCallBanner");
 	self.isCallHudHidden = NO;
-	NSLog(@"hook test status bar: %f", [((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height);
-	NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
-	NSLog(@"hook test contact identifier: %@", ((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier);
-	CNEntityType entityType = CNEntityTypeContacts;
-	NSLog(@"hook test CNContactStore authorization value: %ld", [CNContactStore authorizationStatusForEntityType:entityType]);
+	//NSLog(@"hook test status bar: %f", [((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height);
+	//NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
+	//NSLog(@"hook test contact identifier: %@", ((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier);
+	//NSLog(@"hook test CNContactStore authorization value: %ld", [CNContactStore authorizationStatusForEntityType:entityType]);
 	CNContactStore *store = [[%c(CNContactStore) alloc] init];
 	NSError *error;
-	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactImageDataKey] error:&error];
-	UIImage *contactImage = [UIImage imageWithData:currentCallContact.imageData];
-	NSLog(@"hook test image data: %@", contactImage);
+	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactThumbnailImageDataKey] error:&error];
+	UIImage *contactImage = [UIImage imageWithData:currentCallContact.thumbnailImageData];
+	//NSLog(@"hook test image data: %@", contactImage);
 
 	UIImageView *contactImageView = [[UIImageView alloc] initWithImage:contactImage];
 	contactImageView.frame = self.contactView.bounds;
-	[contactImageView.layer setMasksToBounds:YES];
+	contactImageView.layer.cornerRadius = 35;
+	contactImageView.clipsToBounds = YES;
 	[self.contactView addSubview:contactImageView];
 	
 	// currentcallcontact.imagedata then initwithimagedata
@@ -277,6 +277,7 @@
 %new
 -(void)answerCallButtonMessage {
 	[[%c(TUCallCenter) sharedInstance] answerCall:[[%c(TUCallCenter) sharedInstance] incomingCall]];
+	[self hideCallBanner];
 	NSLog(@"answer button tapped");
 }
 %new
