@@ -84,6 +84,12 @@
 -(void)reactivateAlertFromStatusBarTap;
 @end
 
+@interface SBStatusBarManager
++(id)sharedInstance;
+@end
+
+@class SBUIController;
+
 %hook SBInCallAlertManager
 -(void)reactivateAlertFromStatusBarTap {
 	NSLog(@"reactivateAlertFromStatusBarTap hook test: %@", [NSProcessInfo processInfo].processName);
@@ -108,6 +114,19 @@
 }
 %end
 
+@interface UIStatusBar_Base
+-(CGRect)currentFrame;
+@end
+
+@interface UIStatusBar : UIStatusBar_Base
+@end
+
+@interface SBStatusBarContainer
+-(UIStatusBar *)statusBar;
+@end
+
+@class UIStatusBar;
+
 %hook SpringBoard
 %property (strong, nonatomic) UIWindow *callWindow;
 %property (strong, nonatomic) UIButton *contactView;
@@ -127,7 +146,6 @@
 	}
 	if (!self.callWindow) {
 		CGRect screenBounds = [UIScreen mainScreen].bounds;
-
 		self.callWindow = [[UIWindow alloc] initWithFrame:CGRectMake(10, -150, screenBounds.size.width - 20, 100)];
 		[self.callWindow setBackgroundColor: [UIColor colorWithRed:0.5 green:0.5 blue:0.5 alpha:0.6]];
 		UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
@@ -204,6 +222,9 @@
 -(void)showCallBanner {
 	NSLog(@"showCallBanner");
 	self.isCallHudHidden = NO;
+	NSLog(@"hook test status bar: %f", [((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height);
+	NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
+
 
 	// [[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
 	// [[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
@@ -217,7 +238,7 @@
 	[UIView animateWithDuration:0.3f animations:^{
 		self.callWindow.hidden = NO;
 		self.callWindow.alpha = 1.0;
-		self.callWindow.center = CGPointMake(self.callWindow.center.x, +85);
+		self.callWindow.center = CGPointMake(self.callWindow.center.x, ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height) + 45);
 	}
 	completion:^(BOOL finished) {
 	}];
