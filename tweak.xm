@@ -1,8 +1,10 @@
 #import <UIKit/UIKit.h>
+#import <Contacts/Contacts.h>
 #import "MRYIPCCenter.h"
 
 @interface TUCall
 @property (nonatomic,copy,readonly) NSString * displayName;
+@property (nonatomic,copy,readonly) NSString * contactIdentifier; 
 @end
 
 @interface SKJServer : NSObject
@@ -224,7 +226,22 @@
 	self.isCallHudHidden = NO;
 	NSLog(@"hook test status bar: %f", [((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height);
 	NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
+	NSLog(@"hook test contact identifier: %@", ((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier);
+	CNEntityType entityType = CNEntityTypeContacts;
+	NSLog(@"hook test CNContactStore authorization value: %ld", [CNContactStore authorizationStatusForEntityType:entityType]);
+	CNContactStore *store = [[%c(CNContactStore) alloc] init];
+	NSError *error;
+	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactImageDataKey] error:&error];
+	UIImage *contactImage = [UIImage imageWithData:currentCallContact.imageData];
+	NSLog(@"hook test image data: %@", contactImage);
 
+	UIImageView *contactImageView = [[UIImageView alloc] initWithImage:contactImage];
+	contactImageView.frame = self.contactView.bounds;
+	[contactImageView.layer setMasksToBounds:YES];
+	[self.contactView addSubview:contactImageView];
+	
+	// currentcallcontact.imagedata then initwithimagedata
+	// ((CNContact *)[[%c(CNContact) alloc] initWithIdentifier:((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier]).firstName
 
 	// [[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
 	// [[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
@@ -238,7 +255,7 @@
 	[UIView animateWithDuration:0.3f animations:^{
 		self.callWindow.hidden = NO;
 		self.callWindow.alpha = 1.0;
-		self.callWindow.center = CGPointMake(self.callWindow.center.x, ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height) + 45);
+		self.callWindow.center = CGPointMake(self.callWindow.center.x, ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height) + 50);
 	}
 	completion:^(BOOL finished) {
 	}];

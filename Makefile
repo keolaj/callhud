@@ -4,7 +4,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = callhud3
 ARCHS = arm64 arm64e
-TARGET = iphone:clang::12.0
+TARGET = iphone:clang:12.0:12.0
 
 callhud3_FILES = tweak.xm MRYIPCCenter.m
 callhud3_CFLAGS = -fobjc-arc
