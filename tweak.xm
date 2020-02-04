@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <Contacts/Contacts.h>
+#import <UIKit/UIWindow+Private.h>
 #import "MRYIPCCenter.h"
 
 @interface TUCall
@@ -149,6 +150,7 @@
 	if (!self.callWindow) {
 		CGRect screenBounds = [UIScreen mainScreen].bounds;
 		self.callWindow = [[UIWindow alloc] initWithFrame:CGRectMake(10, -150, screenBounds.size.width - 20, 100)];
+		[self.callWindow _setSecure:YES];
 		[self.callWindow setBackgroundColor: [UIColor colorWithRed:0.5 green:0.5 blue:0.5 alpha:0.6]];
 		UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
 		UIVisualEffectView *blurEffectView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
@@ -251,11 +253,13 @@
 	// if (![incomingCallInfo.displayName isEqualToString:@""]) {
 	// 	self.callerLabel.text = incomingCallInfo.displayName;
 	// }
+	NSLog(@"hook test current status bar height: %f", ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height));
 
 	[UIView animateWithDuration:0.3f animations:^{
 		self.callWindow.hidden = NO;
 		self.callWindow.alpha = 1.0;
-		self.callWindow.center = CGPointMake(self.callWindow.center.x, ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height) + 50);
+		self.callWindow.center = CGPointMake(self.callWindow.center.x, [UIApplication sharedApplication].statusBarFrame.size.height + 50);
+		// ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height) + 50
 	}
 	completion:^(BOOL finished) {
 	}];
