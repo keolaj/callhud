@@ -111,8 +111,30 @@
 	TUCall *incomingCallObject = [[%c(TUCallCenter) sharedInstance] incomingCall];
 
 	if (incomingCallObject) {
-		[[%c(SpringBoard) sharedApplication] setDisplayName:incomingCallObject.displayName];
-		[[%c(SpringBoard) sharedApplication] showCallBanner];
+		SpringBoard *springboard = (SpringBoard*)[NSClassFromString(@"SpringBoard") sharedApplication];
+		[springboard setDisplayName:incomingCallObject.displayName];
+
+		CNContactStore *store = [[%c(CNContactStore) alloc] init];
+		NSError *error;
+		CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactThumbnailImageDataKey] error:&error];
+		// if (currentCallContact.thumbnailImageData) {
+		// 	UIImage *contactImage = [UIImage imageWithData:currentCallContact.thumbnailImageData];
+		// } else  {
+		
+		// }
+		UIImage *contactImage = [UIImage imageWithData:currentCallContact.thumbnailImageData];
+		NSLog(@"hook test image data: %@", contactImage);
+
+		[springboard.contactView.subviews makeObjectsPerformSelector: @selector(removeFromSuperview)];
+		
+
+		UIImageView *contactImageView = [[UIImageView alloc] initWithImage:contactImage];
+		contactImageView.frame = springboard.contactView.bounds;
+		contactImageView.layer.cornerRadius = 35;
+		contactImageView.clipsToBounds = YES;
+		[springboard.contactView addSubview:contactImageView];
+
+		[springboard showCallBanner];
 	}
 }
 %end
@@ -230,29 +252,12 @@
 	//NSLog(@"hook test root view controller: %@", MSHookIvar<SBUIController *>(self, "_uiController"));
 	//NSLog(@"hook test contact identifier: %@", ((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier);
 	//NSLog(@"hook test CNContactStore authorization value: %ld", [CNContactStore authorizationStatusForEntityType:entityType]);
-	CNContactStore *store = [[%c(CNContactStore) alloc] init];
-	NSError *error;
-	CNContact *currentCallContact = [store unifiedContactWithIdentifier:(((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier) keysToFetch:@[CNContactGivenNameKey, CNContactThumbnailImageDataKey] error:&error];
-	UIImage *contactImage = [UIImage imageWithData:currentCallContact.thumbnailImageData];
-	//NSLog(@"hook test image data: %@", contactImage);
-
-	UIImageView *contactImageView = [[UIImageView alloc] initWithImage:contactImage];
-	contactImageView.frame = self.contactView.bounds;
-	contactImageView.layer.cornerRadius = 35;
-	contactImageView.clipsToBounds = YES;
-	[self.contactView addSubview:contactImageView];
 	
-	// currentcallcontact.imagedata then initwithimagedata
-	// ((CNContact *)[[%c(CNContact) alloc] initWithIdentifier:((TUCall *)[[%c(TUCallCenter) sharedInstance] incomingCall]).contactIdentifier]).firstName
 
 	// [[%c(PHInCallRootViewController) sharedInstance] prepareForDismissal];
 	// [[%c(PHInCallRootViewController) sharedInstance] dismissPhoneRemoteViewController];
 	// [[%c(PHInCallRootViewController) sharedInstance] setShouldForceDismiss];
-	// TUCall *incomingCallInfo = [[%c(TUCallCenter) sharedInstance] incomingCall];
-	// NSLog(@"hook test %@", self.callerLabel.text);
-	// if (![incomingCallInfo.displayName isEqualToString:@""]) {
-	// 	self.callerLabel.text = incomingCallInfo.displayName;
-	// }
+
 	NSLog(@"hook test current status bar height: %f", ([((SBStatusBarContainer *)[MSHookIvar<NSHashTable *>((SBStatusBarManager *)[%c(SBStatusBarManager) sharedInstance], "_statusBars") anyObject]).statusBar currentFrame].size.height));
 
 	[UIView animateWithDuration:0.3f animations:^{
@@ -281,7 +286,6 @@
 %new
 -(void)answerCallButtonMessage {
 	[[%c(TUCallCenter) sharedInstance] answerCall:[[%c(TUCallCenter) sharedInstance] incomingCall]];
-	[self hideCallBanner];
 	NSLog(@"answer button tapped");
 }
 %new
